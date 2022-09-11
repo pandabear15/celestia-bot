@@ -2,6 +2,7 @@
   "server": 828122715780939786,
   "log_channel": 1016982786059542559,
   "max_messages": 300000,
+  "backlog_length": 30,
   "log_history": 3,
   "ignored_categories": [858060453607374860, 910345180593414194]
 }

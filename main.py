@@ -17,6 +17,7 @@ config_file = open('.conf/prod_config.json')
 config = json.load(config_file)
 server: int = int(config['server'])
 max_messages: int = int(config['max_messages'])
+backlog_length: int = int(config['backlog_length'])
 log_channel: int = int(config['log_channel'])
 log_history: int = int(config['log_history'])
 ignored_categories: list[int] = config['ignored_categories']
@@ -106,7 +107,7 @@ async def populate_cache():
             if channel.type == discord.ChannelType.text and channel.category_id not in ignored_categories:
                 print(f'Caching channel {channel.name}')
                 message_iterator = channel.history(limit=None,
-                                                   after=datetime.datetime.now() - datetime.timedelta(days=30))
+                                                   after=datetime.datetime.now() - datetime.timedelta(days=backlog_length))
                 while True:
                     try:
                         next_message: discord.Message = await anext(message_iterator)
