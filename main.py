@@ -13,7 +13,7 @@ from message_cache import MessageCache
 
 # read config
 load_dotenv()
-config_file = open('prod_config.json')
+config_file = open('.conf/prod_config.json')
 config = json.load(config_file)
 server: int = int(config['server'])
 max_messages: int = int(config['max_messages'])
