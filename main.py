@@ -17,7 +17,7 @@ from message_cache import MessageCache
 
 # read config
 load_dotenv()
-config_file = open('.conf/test_config.json')
+config_file = open('.conf/prod_config.json')
 config = json.load(config_file)
 token: str = config['token']
 server: int = int(config['server'])
