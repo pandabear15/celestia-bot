@@ -36,7 +36,7 @@ class MessageCache:
                     else:
                         left = mid
                         break
-                if not self._cache[left].total_eq(message):
+                if left >= len(self._cache) or not self._cache[left].total_eq(message):
                     self._cache.insert(left, message)
             if len(self._cache) > self._max_cache_size:
                 self._cache = (self._cache.append(message))[-self._max_cache_size:]
