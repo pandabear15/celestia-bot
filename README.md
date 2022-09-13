@@ -4,8 +4,21 @@ UW Genshin Discord's custom moderation bot.
 Celestia monitors and logs edit and delete actions on the server for the purposes of accountability and safety.
 For questions about the bot, please contact RicePulp#0077 and/or Purost#1025.
 
-## Version 1.0.0
-Initial release.
+## Version 1.0.2
+### Features
+- Reworked the edit and delete logs to display attachments directly after the message that contained them.
+### Bug fixes
+- Fixed an issue that caused messages posted during Celestia's booting up period to appear in the cache twice.
+- Fixed an issue that caused edit messages to display a coroutine object instead of the proper Discord message in the
+'After' field.
+### Other changes
+- Deleted message, after logging, are now also deleted from the internal cache, optimizing memory usage.
+- Metrics on reading and writing to the cache file are now recorded to the console.
+- Reversed the versioning order in README.md.
+  - This change aligns with typical versioning logs, beginning with the most recent version.
+- Minor QOL fixes.
+### Known issues
+- Delete logs do not display attachments for context messages.
 
 ## Version 1.0.1
 ### Features
@@ -28,8 +41,11 @@ name surrounded by colons as if it were an emote.
 ### Known issues
 - Celestia's error logs are suboptimal and could provide more information or context about errors.
 - The edit embed displays attachments illogically and should display "Attachments before edit" directly after the "Before"
-section. It should also display the attachments remaining after the edit.
+section. It should also display the attachments remaining after the edit. **Addressed in Version 1.0.2.**
 - Currently, after a message is deleted, the message cache still lives in the internal cache, which is an unnecessary
-use of resources.
+use of resources. **Addressed in Version 1.0.2.**
 - The bot is currently hosted locally, and is planned to be migrated to a hosting service. This change will occur with 
 Version 1.1.0.
+
+## Version 1.0.0
+Initial release.

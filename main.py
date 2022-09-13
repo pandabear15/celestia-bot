@@ -1,5 +1,5 @@
 # Celestia Bot
-# Version 1.0.1
+# Version 1.0.2
 
 import os
 import time
@@ -63,7 +63,7 @@ async def create_delete_log_embed(message: MessageModel) -> discord.Embed:
             previous_message: discord.Message = await anext(message_iterator)
             if previous_message.type != discord.MessageType.default:
                 continue
-            embed.insert_field_at(index=0, name=previous_message.author.name,
+            embed.insert_field_at(index=0, name=f'**{previous_message.author.name}**',
                                   value=get_message_content(previous_message),
                                   inline=False)
             first_message_url = previous_message.jump_url
@@ -93,11 +93,13 @@ async def create_edit_log_embed(before: MessageModel, after: MessageModel) -> di
     embed.set_author(name=f'{author.name}#{author.discriminator} ({author.display_name})',
                      icon_url=author.display_avatar.url)
     embed.url = (await channel.get_partial_message(after.message_id).fetch()).jump_url
-    embed.add_field(name=f'Before',
+    embed.add_field(name=f'**Before**',
                     value=await get_message_model_content(before), inline=False)
-    embed.add_field(name=f'After', value=get_message_model_content(after), inline=False)
     if len(before.attachments) > 0:
-        embed.add_field(name='Attachments before edit', value='\n'.join(before.attachments), inline=False)
+        embed.add_field(name='Attachments', value='\n'.join(before.attachments), inline=False)
+    embed.add_field(name=f'**After**', value=await get_message_model_content(after), inline=False)
+    if len(after.attachments) > 0:
+        embed.add_field(name='Attachments', value='\n'.join(after.attachments), inline=False)
     #    if before.sticker != '':
     #        embed.set_image(url=before.sticker)
     embed.set_footer(text=f'Edited at {datetime.datetime.now(get_timezone()).isoformat(sep=" ", timespec="seconds")}')
@@ -117,10 +119,11 @@ async def populate_cache():
     global is_setting_up, message_cache
     if read_cache_file:
         try:
+            read_cache_time: float = get_unix_time(datetime.datetime.now())
             cache_file = open(".cache/cache.txt")
             cache_object = json.load(cache_file)
             message_cache = MessageCache(max_cache_size=max_messages, cache=cache_object)
-            print("Loaded cache file")
+            print(f'Loaded cache file in {round(get_unix_time(datetime.datetime.now()) - read_cache_time, 3)}s')
         except json.decoder.JSONDecodeError:
             print("Failed to read cache file")
     guild: discord.Guild = bot.get_guild(server)
@@ -197,7 +200,8 @@ async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
             if payload.cached_message is not None:
                 if payload.cached_message.author.bot or payload.cached_message.guild.id != server:
                     return
-            message = message_cache.get_message_model(MessageModel(message=payload.cached_message, payload=payload))
+            message = message_cache.get_message_model(MessageModel(message=payload.cached_message, payload=payload),
+                                                      delete=True)
             if message is not None:
                 embed = await create_delete_log_embed(message=message)
                 await bot.get_channel(log_channel).send(embed=embed)
@@ -222,17 +226,19 @@ async def on_message(message: discord.Message):
 
 @tasks.loop(hours=1)
 async def print_cache():
+    print_cache_time: float = get_unix_time(datetime.datetime.now())
     cache_file = open(".cache/cache.txt", "w")
     cache_file.write(to_json(message_cache.get_cache()))
     cache_file.close()
-    print(f'Wrote to cache at {datetime.datetime.now().isoformat()}')
+    print(f'Wrote to cache at {datetime.datetime.now(tz=get_timezone()).isoformat()}, writing time was '
+          f'{round(get_unix_time(datetime.datetime.now()) - print_cache_time, 3)}s')
 
 
 @bot.event
 async def on_ready():
     try:
         print('We have logged in as {0.user}'.format(bot))
-        populate_time = get_unix_time(datetime.datetime.now())
+        populate_time: float = get_unix_time(datetime.datetime.now())
         print('Populating cache')
         await populate_cache()
         print(f'Cache populated in {round(get_unix_time(datetime.datetime.now()) - populate_time, 3)} seconds')
@@ -240,6 +246,7 @@ async def on_ready():
         print_metrics()
         await bot.get_channel(log_channel).send(content='Celestia has booted up and is now '
                                                         'monitoring edits and deletions.')
+        print('Celestia is ready.')
     except:
         await notify_error(traceback.format_exc(limit=None))
 
