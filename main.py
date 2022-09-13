@@ -17,7 +17,7 @@ from message_cache import MessageCache
 
 # read config
 load_dotenv()
-config_file = open('.conf/test_config.json')
+config_file = open('.conf/prod_config.json')
 config = json.load(config_file)
 token: str = config['token']
 server: int = int(config['server'])
@@ -232,7 +232,7 @@ async def print_cache():
 async def on_ready():
     try:
         print('We have logged in as {0.user}'.format(bot))
-        populate_time = get_unix_time(datetime.datetime.now())
+        populate_time = get_unix_time(datetime.datetime.now(tz=get_timezone()))
         print('Populating cache')
         await populate_cache()
         print(f'Cache populated in {round(get_unix_time(datetime.datetime.now()) - populate_time, 3)} seconds')
