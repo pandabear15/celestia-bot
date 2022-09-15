@@ -235,6 +235,7 @@ async def on_message(message: discord.Message):
                 print_metrics()
     except:
         await notify_error(traceback.format_exc(limit=None))
+    await bot.process_commands(message)
 
 
 @tasks.loop(hours=1)
