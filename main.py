@@ -1,12 +1,12 @@
 # Celestia Bot
-# Version 1.0.2
+# Version 1.0.3
 
 import os
 import time
 import traceback
 
 import discord
-from discord.ext import tasks
+from discord.ext import tasks, commands
 import json
 import datetime
 
@@ -15,12 +15,15 @@ from dotenv import load_dotenv
 from message_model import MessageModel
 from message_cache import MessageCache
 
+version = '1.0.3'
+
 # read config
 load_dotenv()
 config_file = open('.conf/prod_config.json')
 config = json.load(config_file)
 token: str = config['token']
 server: int = int(config['server'])
+admin_role = int(config['admin'])
 max_messages: int = int(config['max_messages'])
 backlog_length: int = int(config['backlog_length'])
 log_channel: int = int(config['log_channel'])
@@ -36,12 +39,13 @@ i: int = 0
 pdt = datetime.timezone(-datetime.timedelta(hours=7))
 pst = datetime.timezone(-datetime.timedelta(hours=8))
 is_setting_up = True
+start_time: datetime.datetime = None
 
 # bot setup
 bot_token: str = os.getenv(token)
-bot: discord.Client = discord.Client(intents=discord.Intents.all(), status=discord.Status.online,
-                                     activity=discord.Activity(type=discord.ActivityType.watching,
-                                                               name='over the server'))
+bot: commands.Bot = commands.Bot(command_prefix='+', intents=discord.Intents.all(), status=discord.Status.online,
+                                 activity=discord.Activity(type=discord.ActivityType.watching,
+                                                           name='over the server'))
 
 
 async def create_delete_log_embed(message: MessageModel) -> discord.Embed:
@@ -66,6 +70,10 @@ async def create_delete_log_embed(message: MessageModel) -> discord.Embed:
             embed.insert_field_at(index=0, name=f'**{previous_message.author.name}**',
                                   value=get_message_content(previous_message),
                                   inline=False)
+            if len(previous_message.attachments) > 0:
+                embed.insert_field_at(index=1, name='Attachments',
+                                      value='\n'.join([attachment.url for attachment in previous_message.attachments]),
+                                      inline=False)
             first_message_url = previous_message.jump_url
         except StopAsyncIteration:
             break
@@ -111,7 +119,7 @@ async def get_message_model_content(message: MessageModel) -> str:
 
 
 def get_message_content(message: discord.Message) -> str:
-    return ((message.content if message.content == '' else "*[Empty message body]*") +
+    return ((message.content if message.content != '' else "*[Empty message body]*") +
             ('' if len(message.stickers) == 0 else f'\n:{message.stickers[0].name}:'))
 
 
@@ -147,10 +155,15 @@ async def populate_cache():
     is_setting_up = False
 
 
-async def notify_error(error: str):
+async def notify_error(error: str, message_model: MessageModel = None):
+    new_line = '\n'
     print(error)
     await bot.get_channel(log_channel).send(content=(f'Celestia ran into an error! Please contact the bot dev with '
-                                                     f'the following stacktrace: ```{error}```'))
+                                                     f'the following stacktrace: ```{error}'
+                                                     f'{new_line + f"From message id {message_model.message_id}"}' if message_model is not None else ''
+                                                     f'{new_line + f"From channel {bot.get_channel(message_model.channel_id).mention}"}' if message_model is not None else ''
+                                                     f'{new_line + f"From user {bot.get_user(message_model.user_id).name}"}' if message_model is not None else ''
+                                                     f'```'))
 
 
 def print_metrics():
@@ -222,6 +235,7 @@ async def on_message(message: discord.Message):
                 print_metrics()
     except:
         await notify_error(traceback.format_exc(limit=None))
+    await bot.process_commands(message)
 
 
 @tasks.loop(hours=1)
@@ -234,10 +248,19 @@ async def print_cache():
           f'{round(get_unix_time(datetime.datetime.now()) - print_cache_time, 3)}s')
 
 
+@bot.command(name='info')
+async def get_info(ctx: commands.Context):
+    if ctx.message.channel.id == log_channel and ctx.author.get_role(admin_role) is not None:
+        await bot.get_channel(log_channel).send(content=f'Running version {version}, bot has been running for '
+                                                        f'{str(datetime.datetime.now(get_timezone()) - start_time)}')
+
+
 @bot.event
 async def on_ready():
+    global start_time
     try:
         print('We have logged in as {0.user}'.format(bot))
+        start_time = datetime.datetime.now(get_timezone())
         populate_time: float = get_unix_time(datetime.datetime.now())
         print('Populating cache')
         await populate_cache()
