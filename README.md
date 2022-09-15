@@ -9,6 +9,7 @@ Released on XXXX
 ### Features
 - The 'Welcome' and 'Important' categories in the server are no longer monitored by Celestia.
 - Delete logs now also include attachment information for context messages.
+- The command "+info" now displays basic information about the bot and its current status.
 ### Bug fixes
 - Fixed an issue that caused context messages with textual content to appear as if they had no textual content.
   - This issue also could sometimes cause Celestia to error out.

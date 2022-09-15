@@ -1,7 +1,7 @@
 {
   "token": "TEST_TOKEN",
   "server": 790789893071962132,
-  "admin": "Admin",
+  "admin": 1020015483853996163,
   "log_channel": 1017687912000790588,
   "max_messages": 300000,
   "backlog_length": 30,

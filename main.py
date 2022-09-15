@@ -23,7 +23,7 @@ config_file = open('.conf/prod_config.json')
 config = json.load(config_file)
 token: str = config['token']
 server: int = int(config['server'])
-admin_role = str(config['admin'])
+admin_role = int(config['admin'])
 max_messages: int = int(config['max_messages'])
 backlog_length: int = int(config['backlog_length'])
 log_channel: int = int(config['log_channel'])
@@ -248,9 +248,8 @@ async def print_cache():
 
 
 @bot.command(name='info')
-@commands.has_role(admin_role)
 async def get_info(ctx: commands.Context):
-    if ctx.message.channel.id == log_channel:
+    if ctx.message.channel.id == log_channel and ctx.author.get_role(admin_role) is not None:
         await bot.get_channel(log_channel).send(content=f'Running version {version}, bot has been running for '
                                                         f'{str(datetime.datetime.now(get_timezone()) - start_time)}')
 
