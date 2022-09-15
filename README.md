@@ -5,7 +5,7 @@ Celestia monitors and logs edit and delete actions on the server for the purpose
 For questions about the bot, please contact RicePulp#0077 and/or Purost#1025.
 
 ## Version 1.0.3
-Released on XXXX
+Released on 2022-09-15 13:23-07:00
 ### Features
 - The 'Welcome' and 'Important' categories in the server are no longer monitored by Celestia.
 - Delete logs now also include attachment information for context messages.
