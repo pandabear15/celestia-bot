@@ -176,7 +176,7 @@ async def notify_error(error: str, message_model: MessageModel = None):
                                                      f'```'))
 
 
-async def send_dm_sticker(user_id: int):
+async def send_dm_message(user_id: int):
     if random.random() < dm_probability:
         user: discord.User = bot.get_user(user_id)
         await user.send(content='Celestia is watching you...')
@@ -219,7 +219,7 @@ async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent):
             if before is not None and not before.total_eq(after):
                 embed = await create_edit_log_embed(before=before, after=after)
                 await bot.get_channel(log_channel).send(embed=embed)
-                await send_dm_sticker(after.user_id)
+                await send_dm_message(after.user_id)
     except:
         await notify_error(traceback.format_exc(limit=None), message_model=after)
 
@@ -237,7 +237,7 @@ async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
             if message is not None:
                 embed = await create_delete_log_embed(message=message)
                 await bot.get_channel(log_channel).send(embed=embed)
-                await send_dm_sticker(message.user_id)
+                await send_dm_message(message.user_id)
     except:
         await notify_error(traceback.format_exc(limit=None), message_model=message)
 
