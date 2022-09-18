@@ -5,7 +5,7 @@ Celestia monitors and logs edit and delete actions on the server for the purpose
 For questions about the bot, please contact RicePulp#0077 and/or Purost#1025.
 
 ## Version 1.1.0
-Released on XXXX
+Released on 2022-09-18 16:18-07:00.
 ### Features
 - Celestia is now hosted on Amazon Web Service (AWS) EC2. This change ensures that uptime on the bot is not reliant on 
 uptime of a personal computer, especially one that needs to be turned off for an extended period of time in the near 
