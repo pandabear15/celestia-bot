@@ -1,5 +1,5 @@
 # Celestia Bot
-# Version 1.0.3
+# Version 1.1.0
 
 import os
 import time
@@ -15,7 +15,12 @@ from dotenv import load_dotenv
 from message_model import MessageModel
 from message_cache import MessageCache
 
-version = '1.0.3'
+
+class ExpectedException(Exception):
+    pass
+
+
+version = '1.1.0'
 
 # read config
 load_dotenv()
@@ -161,17 +166,17 @@ async def notify_error(error: str, message_model: MessageModel = None):
     await bot.get_channel(log_channel).send(content=(f'Celestia ran into an error! Please contact the bot dev with '
                                                      f'the following stacktrace: ```{error}'
                                                      f'{new_line + f"From message id {message_model.message_id}"}' if message_model is not None else ''
-                                                     f'{new_line + f"From channel {bot.get_channel(message_model.channel_id).mention}"}' if message_model is not None else ''
-                                                     f'{new_line + f"From user {bot.get_user(message_model.user_id).name}"}' if message_model is not None else ''
-                                                     f'```'))
+                                                                                                                                                     f'{new_line + f"From channel {bot.get_channel(message_model.channel_id).mention}"}' if message_model is not None else ''
+                                                                                                                                                                                                                                                                           f'{new_line + f"From user {bot.get_user(message_model.user_id).name}"}' if message_model is not None else ''
+                                                                                                                                                                                                                                                                                                                                                                                     f'```'))
 
 
-def print_metrics():
+def get_metrics() -> str:
     length = message_cache.len()
     size = message_cache.__sizeof__()
-    print(f'Cache length: {length}')
-    print(f'Cache size: {size}')
-    print(f'Average entry size: {round(size / length, 2)}')
+    ret_str = (f'Cache length: {length}' + '\n' + f'Cache size: {size}' + '\n'
+                                                                          f'Average entry size: {round(size / length, 2)}')
+    return ret_str
 
 
 def get_unix_time(time: datetime.datetime) -> float:
@@ -192,6 +197,7 @@ def to_json(obj):
 
 @bot.event
 async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent):
+    after_message = None
     try:
         if not is_setting_up:
             after_message = await bot.get_channel(payload.channel_id).get_partial_message(payload.message_id).fetch()
@@ -203,11 +209,12 @@ async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent):
                 embed = await create_edit_log_embed(before=before, after=after)
                 await bot.get_channel(log_channel).send(embed=embed)
     except:
-        await notify_error(traceback.format_exc(limit=None))
+        await notify_error(traceback.format_exc(limit=None), message_model=after_message)
 
 
 @bot.event
 async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
+    message = None
     try:
         if not is_setting_up:
             if payload.cached_message is not None:
@@ -219,7 +226,7 @@ async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
                 embed = await create_delete_log_embed(message=message)
                 await bot.get_channel(log_channel).send(embed=embed)
     except:
-        await notify_error(traceback.format_exc(limit=None))
+        await notify_error(traceback.format_exc(limit=None), message_model=message)
 
 
 @bot.event
@@ -232,9 +239,9 @@ async def on_message(message: discord.Message):
             message_cache.add_message_model(MessageModel(message=message))
             i = i + 1
             if i % 100 == 0:
-                print_metrics()
+                print(get_metrics())
     except:
-        await notify_error(traceback.format_exc(limit=None))
+        await notify_error(traceback.format_exc(limit=None), message_model=MessageModel(message))
     await bot.process_commands(message)
 
 
@@ -251,8 +258,19 @@ async def print_cache():
 @bot.command(name='info')
 async def get_info(ctx: commands.Context):
     if ctx.message.channel.id == log_channel and ctx.author.get_role(admin_role) is not None:
-        await bot.get_channel(log_channel).send(content=f'Running version {version}, bot has been running for '
-                                                        f'{str(datetime.datetime.now(get_timezone()) - start_time)}')
+        content = (f'```Running version {version}' + '\n' + f'Celestia has been running for '
+                                                            f'{str(datetime.datetime.now(get_timezone()) - start_time).split(".")[0]}' + '\n'
+                                                                                                                                         f'{get_metrics()}```')
+        await bot.get_channel(log_channel).send(content=content)
+
+
+@bot.command(name='error')
+async def raise_error(ctx: commands.Context):
+    if ctx.message.channel.id == log_channel and ctx.author.get_role(admin_role) is not None:
+        try:
+            raise ExpectedException("This exception is expected.")
+        except ExpectedException:
+            await notify_error(traceback.format_exc(limit=None), message_model=MessageModel(ctx.message))
 
 
 @bot.event
@@ -266,7 +284,7 @@ async def on_ready():
         await populate_cache()
         print(f'Cache populated in {round(get_unix_time(datetime.datetime.now()) - populate_time, 3)} seconds')
         print_cache.start()
-        print_metrics()
+        print(get_metrics())
         await bot.get_channel(log_channel).send(content='Celestia has booted up and is now '
                                                         'monitoring edits and deletions.')
         print('Celestia is ready.')
