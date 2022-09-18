@@ -163,19 +163,22 @@ async def populate_cache():
 async def notify_error(error: str, message_model: MessageModel = None):
     new_line = '\n'
     print(error)
+    message_str = f'{new_line + f"From message id {message_model.message_id}"}' if message_model is not None else ''
+    channel_str = f'{new_line + f"From channel {bot.get_channel(message_model.channel_id).mention}"}' if message_model is not None else ''
+    user_str = f'{new_line + f"From user {bot.get_user(message_model.user_id).name}"}' if message_model is not None else ''
     await bot.get_channel(log_channel).send(content=(f'Celestia ran into an error! Please contact the bot dev with '
                                                      f'the following stacktrace: ```{error}'
-                                                     f'{new_line + f"From message id {message_model.message_id}"}' if message_model is not None else ''
-                                                                                                                                                     f'{new_line + f"From channel {bot.get_channel(message_model.channel_id).mention}"}' if message_model is not None else ''
-                                                                                                                                                                                                                                                                           f'{new_line + f"From user {bot.get_user(message_model.user_id).name}"}' if message_model is not None else ''
-                                                                                                                                                                                                                                                                                                                                                                                     f'```'))
+                                                     f'{message_str}'
+                                                     f'{channel_str}'
+                                                     f'{user_str}'
+                                                     f'```'))
 
 
 def get_metrics() -> str:
     length = message_cache.len()
     size = message_cache.__sizeof__()
-    ret_str = (f'Cache length: {length}' + '\n' + f'Cache size: {size}' + '\n'
-                                                                          f'Average entry size: {round(size / length, 2)}')
+    ret_str = (f'Cache length: {length} entries' + '\n' + f'Cache size: {size} bytes' + '\n'
+               f'Average entry size: {round(size / length, 2)} bytes')
     return ret_str
 
 
@@ -259,8 +262,8 @@ async def print_cache():
 async def get_info(ctx: commands.Context):
     if ctx.message.channel.id == log_channel and ctx.author.get_role(admin_role) is not None:
         content = (f'```Running version {version}' + '\n' + f'Celestia has been running for '
-                                                            f'{str(datetime.datetime.now(get_timezone()) - start_time).split(".")[0]}' + '\n'
-                                                                                                                                         f'{get_metrics()}```')
+                   f'{str(datetime.datetime.now(get_timezone()) - start_time).split(".")[0]}' + '\n'
+                   f'{get_metrics()}```')
         await bot.get_channel(log_channel).send(content=content)
 
 
