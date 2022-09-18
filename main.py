@@ -44,7 +44,7 @@ i: int = 0
 pdt = datetime.timezone(-datetime.timedelta(hours=7))
 pst = datetime.timezone(-datetime.timedelta(hours=8))
 is_setting_up = True
-start_time: datetime.datetime = None
+start_time: datetime.datetime | None = None
 
 # bot setup
 bot_token: str = os.getenv(token)
@@ -161,15 +161,14 @@ async def populate_cache():
 
 
 async def notify_error(error: str, message_model: MessageModel = None):
-    new_line = '\n'
     print(error)
-    message_str = f'{new_line + f"From message id {message_model.message_id}"}' if message_model is not None else ''
-    channel_str = f'{new_line + f"From channel {bot.get_channel(message_model.channel_id).mention}"}' if message_model is not None else ''
-    user_str = f'{new_line + f"From user {bot.get_user(message_model.user_id).name}"}' if message_model is not None else ''
+    message_str = f'{f"From message id {message_model.message_id}"}' if message_model is not None else ''
+    channel_str = f'{f"From channel {bot.get_channel(message_model.channel_id).name}"}' if message_model is not None else ''
+    user_str = f'{f"From user {bot.get_user(message_model.user_id).name}"}' if message_model is not None else ''
     await bot.get_channel(log_channel).send(content=(f'Celestia ran into an error! Please contact the bot dev with '
                                                      f'the following stacktrace: ```{error}'
-                                                     f'{message_str}'
-                                                     f'{channel_str}'
+                                                     f'{message_str}' + '\n'
+                                                     f'{channel_str}' + '\n'
                                                      f'{user_str}'
                                                      f'```'))
 
