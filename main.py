@@ -9,6 +9,7 @@ import discord
 from discord.ext import tasks, commands
 import json
 import datetime
+import random
 
 from dotenv import load_dotenv
 
@@ -34,6 +35,7 @@ backlog_length: int = int(config['backlog_length'])
 log_channel: int = int(config['log_channel'])
 log_history: int = int(config['log_history'])
 ignored_categories: list[int] = config['ignored_categories']
+dm_probability: float = config['dm_probability']
 read_cache_file: bool = config['read_cache_file']
 
 # cache
@@ -41,6 +43,7 @@ message_cache: MessageCache = MessageCache(max_cache_size=max_messages)
 i: int = 0
 
 # other variables
+celestia_caught: int = 1018593299440869487
 pdt = datetime.timezone(-datetime.timedelta(hours=7))
 pst = datetime.timezone(-datetime.timedelta(hours=8))
 is_setting_up = True
@@ -173,6 +176,12 @@ async def notify_error(error: str, message_model: MessageModel = None):
                                                      f'```'))
 
 
+async def send_dm_sticker(user_id: int):
+    if random.random() < dm_probability:
+        user: discord.User = bot.get_user(user_id)
+        await user.send(stickers=[await bot.fetch_sticker(celestia_caught)])
+
+
 def get_metrics() -> str:
     length = message_cache.len()
     size = message_cache.__sizeof__()
@@ -181,8 +190,8 @@ def get_metrics() -> str:
     return ret_str
 
 
-def get_unix_time(time: datetime.datetime) -> float:
-    return datetime.datetime.timestamp(time)
+def get_unix_time(date_time: datetime.datetime) -> float:
+    return datetime.datetime.timestamp(date_time)
 
 
 def is_daylight_savings() -> bool:
@@ -210,6 +219,7 @@ async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent):
             if before is not None and not before.total_eq(after):
                 embed = await create_edit_log_embed(before=before, after=after)
                 await bot.get_channel(log_channel).send(embed=embed)
+                await send_dm_sticker(after.user_id)
     except:
         await notify_error(traceback.format_exc(limit=None), message_model=after_message)
 
@@ -227,6 +237,7 @@ async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
             if message is not None:
                 embed = await create_delete_log_embed(message=message)
                 await bot.get_channel(log_channel).send(embed=embed)
+                await send_dm_sticker(message.user_id)
     except:
         await notify_error(traceback.format_exc(limit=None), message_model=message)
 

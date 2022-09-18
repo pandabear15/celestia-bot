@@ -18,6 +18,8 @@ able to query Celestia directly for this information will make monitoring the bo
 - The command "+error" now causes Celestia to throw an error. This, along with "+info", can only be called by admins in
 the logs channel.
   - The purpose of this command is to be able to access and test an error message without an error actually occurring.
+- Celestia now has a 1 in 500 probability of DMing a member the "celestia caught in 4k" sticker when the user edits
+or deletes a message.
 ### Bug Fixes
 - Fixed a bug that caused Celestia to read content strings in the cache file to be interpreted in the wrong encoding
 scheme.
