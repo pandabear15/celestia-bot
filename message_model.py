@@ -1,4 +1,5 @@
 import discord
+import json
 
 
 def _list_attachments(attachments: list[discord.Attachment]) -> list[str]:
@@ -10,25 +11,27 @@ def _list_attachments(attachments: list[discord.Attachment]) -> list[str]:
 
 class MessageModel:
     def __init__(self, message: discord.Message = None, payload: discord.RawMessageUpdateEvent |
-                 discord.RawMessageDeleteEvent | None = None):
-        if message is None and payload is None:
-            raise ValueError('At least one of message and payload must be non-None')
+                                                                 discord.RawMessageDeleteEvent = None, **kwargs):
+        if message is None and payload is None and kwargs is None:
+            raise ValueError('At least one of message, payload, and kwargs must be non-None')
         if message is not None:
             self.message_id: int = message.id
             self.channel_id: int = message.channel.id
             self.user_id: int = message.author.id
             self.content: str = message.content
-            self.sticker: str = '' if len(message.stickers) <= 0 else message.stickers[0].url
+            self.sticker: int = 0 if len(message.stickers) <= 0 else message.stickers[0].id
             self.attachments: list[str] = _list_attachments(message.attachments)
             if self.content == '':
-                self.content = '*[Empty message]*'
-        else:
+                self.content = '*[Empty message body]*'
+        elif payload is not None:
             self.message_id: int = payload.message_id
             self.channel_id: int = payload.channel_id
             self.user_id: int = 0
             self.content: str = ''
-            self.sticker: str = ''
+            self.sticker: int = 0
             self.attachments: list[str] = []
+        else:
+            self.__dict__.update(kwargs['dict'])
 
     def __lt__(self, other):
         return self.message_id < other.message_id
@@ -59,3 +62,7 @@ class MessageModel:
                 self.sticker.__sizeof__() +
                 self.attachments.__sizeof__() +
                 attachment_size)
+
+    def total_eq(self, other):
+        return (self.message_id == other.message_id and self.content == other.content
+                and self.sticker == other.sticker and ''.join(self.attachments) == ''.join(other.attachments))
