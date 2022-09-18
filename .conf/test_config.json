@@ -7,5 +7,6 @@
   "backlog_length": 30,
   "log_history": 3,
   "ignored_categories": [1017687958171680779],
+  "dm_probability": 0.5,
   "read_cache_file": true
 }
