@@ -179,7 +179,7 @@ async def notify_error(error: str, message_model: MessageModel = None):
 async def send_dm_sticker(user_id: int):
     if random.random() < dm_probability:
         user: discord.User = bot.get_user(user_id)
-        await user.send(stickers=[await bot.fetch_sticker(celestia_caught)])
+        await user.send(content='Celestia is watching you...')
 
 
 def get_metrics() -> str:
@@ -208,7 +208,7 @@ def to_json(obj):
 
 @bot.event
 async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent):
-    after_message = None
+    after = None
     try:
         if not is_setting_up:
             after_message = await bot.get_channel(payload.channel_id).get_partial_message(payload.message_id).fetch()
@@ -221,7 +221,7 @@ async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent):
                 await bot.get_channel(log_channel).send(embed=embed)
                 await send_dm_sticker(after.user_id)
     except:
-        await notify_error(traceback.format_exc(limit=None), message_model=after_message)
+        await notify_error(traceback.format_exc(limit=None), message_model=after)
 
 
 @bot.event
