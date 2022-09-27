@@ -26,7 +26,7 @@ version = '1.1.1'
 
 # read config
 load_dotenv()
-config_file = open('.conf/test_config.json')
+config_file = open('.conf/prod_config.json')
 config = json.load(config_file)
 token: str = config['token']
 celestia_id: int = int(config['celestia_id']);
