@@ -8,6 +8,7 @@ import traceback
 import discord
 from discord.ext import tasks, commands
 import json
+import logging
 import datetime
 import random
 
@@ -21,18 +22,20 @@ class ExpectedException(Exception):
     pass
 
 
-version = '1.1.0'
+version = '1.1.1'
 
 # read config
 load_dotenv()
-config_file = open('.conf/prod_config.json')
+config_file = open('.conf/test_config.json')
 config = json.load(config_file)
 token: str = config['token']
+celestia_id: int = int(config['celestia_id']);
 server: int = int(config['server'])
 admin_role = int(config['admin'])
 max_messages: int = int(config['max_messages'])
 backlog_length: int = int(config['backlog_length'])
 log_channel: int = int(config['log_channel'])
+dev_channel: int = int(config['dev_channel'])
 log_history: int = int(config['log_history'])
 ignored_categories: list[int] = config['ignored_categories']
 dm_probability: float = config['dm_probability']
@@ -48,13 +51,13 @@ pdt = datetime.timezone(-datetime.timedelta(hours=7))
 pst = datetime.timezone(-datetime.timedelta(hours=8))
 is_setting_up = True
 start_time: datetime.datetime | None = None
+logging.basicConfig(filename='celestia-logs.txt', encoding='utf-8', level=logging.INFO, filemode='w')
 
 # bot setup
 bot_token: str = os.getenv(token)
 bot: commands.Bot = commands.Bot(command_prefix='+', intents=discord.Intents.all(), status=discord.Status.online,
                                  activity=discord.Activity(type=discord.ActivityType.watching,
                                                            name='over the server'))
-
 
 async def create_delete_log_embed(message: MessageModel) -> discord.Embed:
     author = bot.get_user(message.user_id)
@@ -139,9 +142,9 @@ async def populate_cache():
             cache_file = open(".cache/cache.txt")
             cache_object = json.load(cache_file)
             message_cache = MessageCache(max_cache_size=max_messages, cache=cache_object)
-            print(f'Loaded cache file in {round(get_unix_time(datetime.datetime.now()) - read_cache_time, 3)}s')
+            print_to_bot_logs(f'Loaded cache file in {round(get_unix_time(datetime.datetime.now()) - read_cache_time, 3)}s')
         except json.decoder.JSONDecodeError:
-            print("Failed to read cache file")
+            print_to_bot_logs("Failed to read cache file")
     guild: discord.Guild = bot.get_guild(server)
     time_start = max([datetime.datetime.now(get_timezone()) - datetime.timedelta(days=backlog_length),
                       message_cache.get_max_time(get_timezone())])
@@ -149,7 +152,7 @@ async def populate_cache():
         channels = guild.channels
         for channel in channels:
             if channel.type == discord.ChannelType.text and channel.category_id not in ignored_categories:
-                print(f'Caching channel {channel.name}')
+                print_to_bot_logs(f'Caching channel {channel.name}')
                 message_iterator = channel.history(limit=None, after=time_start)
                 while True:
                     try:
@@ -166,20 +169,27 @@ async def populate_cache():
 async def notify_error(error: str, message_model: MessageModel = None):
     print(error)
     message_str = f'{f"From message id {message_model.message_id}"}' if message_model is not None else ''
-    channel_str = f'{f"From channel {bot.get_channel(message_model.channel_id).name}"}' if message_model is not None else ''
+    channel_str = (f'{f"From channel {bot.get_channel(message_model.channel_id).name}"}'
+                   if message_model is not None else '')
     user_str = f'{f"From user {bot.get_user(message_model.user_id).name}"}' if message_model is not None else ''
-    await bot.get_channel(log_channel).send(content=(f'Celestia ran into an error! Please contact the bot dev with '
-                                                     f'the following stacktrace: ```{error}'
-                                                     f'{message_str}' + '\n'
-                                                     f'{channel_str}' + '\n'
-                                                     f'{user_str}'
-                                                     f'```'))
+    log = await bot.get_channel(log_channel).send(content=(f'Celestia ran into an error! Please contact the bot dev '
+                                                           f'with the following stacktrace: ```{error}'
+                                                           f'{message_str}' + '\n'
+                                                           f'{channel_str}' + '\n'
+                                                           f'{user_str}'
+                                                           f'```'))
+    await log.add_reaction('✉')
 
 
 async def send_dm_message(user_id: int):
     if random.random() < dm_probability:
         user: discord.User = bot.get_user(user_id)
-        await user.send(content='Celestia is watching you...')
+        await user.send(content='https://media.discordapp.net/stickers/1018593299440869487.webp?size=160')
+
+
+def print_to_bot_logs(log: str):
+    print("attempted")
+    logging.info(log)
 
 
 def get_metrics() -> str:
@@ -218,7 +228,8 @@ async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent):
             before = message_cache.get_message_model(message=after, update=True)
             if before is not None and not before.total_eq(after):
                 embed = await create_edit_log_embed(before=before, after=after)
-                await bot.get_channel(log_channel).send(embed=embed)
+                log = await bot.get_channel(log_channel).send(embed=embed)
+                await log.add_reaction('✉')
                 await send_dm_message(after.user_id)
     except:
         await notify_error(traceback.format_exc(limit=None), message_model=after)
@@ -236,7 +247,8 @@ async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
                                                       delete=True)
             if message is not None:
                 embed = await create_delete_log_embed(message=message)
-                await bot.get_channel(log_channel).send(embed=embed)
+                log = await bot.get_channel(log_channel).send(embed=embed)
+                await log.add_reaction('✉')
                 await send_dm_message(message.user_id)
     except:
         await notify_error(traceback.format_exc(limit=None), message_model=message)
@@ -252,10 +264,21 @@ async def on_message(message: discord.Message):
             message_cache.add_message_model(MessageModel(message=message))
             i = i + 1
             if i % 100 == 0:
-                print(get_metrics())
+                print_to_bot_logs(get_metrics())
     except:
         await notify_error(traceback.format_exc(limit=None), message_model=MessageModel(message))
     await bot.process_commands(message)
+
+
+@bot.event
+async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
+    if (reaction.message.channel.id == log_channel and reaction.message.author.id == celestia_id
+            and user.id != celestia_id
+            and bot.get_guild(server).get_member(user.id).get_role(admin_role) is not None
+            and reaction.emoji.__str__() == '✉'):
+        content = reaction.message.content
+        embeds = reaction.message.embeds
+        await bot.get_channel(dev_channel).send(content=content, embeds=embeds)
 
 
 @tasks.loop(hours=1)
@@ -264,7 +287,7 @@ async def print_cache():
     cache_file = open(".cache/cache.txt", "w")
     cache_file.write(to_json(message_cache.get_cache()))
     cache_file.close()
-    print(f'Wrote to cache at {datetime.datetime.now(tz=get_timezone()).isoformat()}, writing time was '
+    print_to_bot_logs(f'Wrote to cache at {datetime.datetime.now(tz=get_timezone()).isoformat()}, writing time was '
           f'{round(get_unix_time(datetime.datetime.now()) - print_cache_time, 3)}s')
 
 
@@ -274,7 +297,8 @@ async def get_info(ctx: commands.Context):
         content = (f'```Running version {version}' + '\n' + f'Celestia has been running for '
                    f'{str(datetime.datetime.now(get_timezone()) - start_time).split(".")[0]}' + '\n'
                    f'{get_metrics()}```')
-        await bot.get_channel(log_channel).send(content=content)
+        log = await bot.get_channel(log_channel).send(content=content)
+        await log.add_reaction('✉')
 
 
 @bot.command(name='error')
@@ -290,17 +314,17 @@ async def raise_error(ctx: commands.Context):
 async def on_ready():
     global start_time
     try:
-        print('We have logged in as {0.user}'.format(bot))
+        print_to_bot_logs('We have logged in as {0.user}'.format(bot) + '\n')
         start_time = datetime.datetime.now(get_timezone())
         populate_time: float = get_unix_time(datetime.datetime.now())
-        print('Populating cache')
+        print_to_bot_logs('Populating cache\n')
         await populate_cache()
-        print(f'Cache populated in {round(get_unix_time(datetime.datetime.now()) - populate_time, 3)} seconds')
+        print_to_bot_logs(f'Cache populated in {round(get_unix_time(datetime.datetime.now()) - populate_time, 3)} seconds\n')
         print_cache.start()
-        print(get_metrics())
+        print_to_bot_logs(get_metrics())
         await bot.get_channel(log_channel).send(content='Celestia has booted up and is now '
                                                         'monitoring edits and deletions.')
-        print('Celestia is ready.')
+        print_to_bot_logs('Celestia is ready.\n')
     except:
         await notify_error(traceback.format_exc(limit=None))
 

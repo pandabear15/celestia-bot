@@ -1,12 +1,14 @@
 {
   "token": "TOKEN",
+  "celestia_id": 1017674026325389322,
   "server": 828122715780939786,
   "admin": 828122715838742536,
   "log_channel": 1016982786059542559,
+  "dev_channel": 1021299063645294622,
   "max_messages": 300000,
   "backlog_length": 30,
   "log_history": 3,
   "ignored_categories": [828122716360015886, 828122716360015889, 858060453607374860, 910345180593414194],
-  "dm_probability": 0.0025,
-  "read_cache_file": false
+  "dm_probability": 0.01,
+  "read_cache_file": true
 }

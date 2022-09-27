@@ -4,6 +4,28 @@ UW Genshin Discord's custom moderation bot.
 Celestia monitors and logs edit and delete actions on the server for the purposes of accountability and safety.
 For questions about the bot, please contact RicePulp#0077 and/or Purost#1025.
 
+## Version 1.1.1
+Released on XXXX.
+### Features
+- Celestia now automatically reacts to all log and error messages with the "✉" (UTF-16 0x2709) emoji. If an admin
+also reacts with the envelope, the message is copied into the Celestia channel. Note that this only works for log
+messages sent since the most recent boot due to Discord limitations.
+  - This change is aimed at making sharing issues with Celestia faster and easier. Working around the said limitation
+is possible but, as of right now, it doesn't seem worth working around for now.
+- Celestia now sends an attachment form of the "caught by celestia in 4k" sticker to users as opposed to a cryptic 
+"Celestia is watching you..."
+### Bug Fixes
+None.
+### Other changes
+- Celestia now writes to a file instead of to console. This makes accessing what originally was console output
+accessible even in the EC2 instance.
+- The chance that Celestia sends the aforementioned image to a user upon an edit or delete has been increased from
+1 in 500 to 1 in 100.
+- Small code QOL changes.
+### Known issues
+- Celestia does not note the reply status of a message in the log entries; that is, right now it is impossible to look
+at a log entry and know to which message a post was replying to, if applicable.
+
 ## Version 1.1.0
 Released on 2022-09-18 16:18-07:00.
 ### Features
