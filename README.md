@@ -5,7 +5,7 @@ Celestia monitors and logs edit and delete actions on the server for the purpose
 For questions about the bot, please contact RicePulp#0077 and/or Purost#1025.
 
 ## Version 1.1.1
-Released on XXXX.
+Released on 2022-09-26 17:14-07:00.
 ### Features
 - Celestia now automatically reacts to all log and error messages with the "✉" (UTF-16 0x2709) emoji. If an admin
 also reacts with the envelope, the message is copied into the Celestia channel. Note that this only works for log
