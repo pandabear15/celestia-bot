@@ -1,8 +1,10 @@
 {
   "token": "TEST_TOKEN",
+  "celestia_id": 1019050145985339422,
   "server": 790789893071962132,
   "admin": 1020015483853996163,
   "log_channel": 1017687912000790588,
+  "dev_channel": 790789893071962135,
   "max_messages": 300000,
   "backlog_length": 30,
   "log_history": 3,
