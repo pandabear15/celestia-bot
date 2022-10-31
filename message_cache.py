@@ -67,10 +67,11 @@ class MessageCache:
             self._lock.release()
         return ret_value
 
-    def get_max_time(self, tzinfo: datetime.tzinfo) -> datetime.datetime:
-        if len(self._cache) <= 0:
-            return datetime.datetime.min.replace(tzinfo=tzinfo)
-        return datetime.datetime.fromtimestamp(((self._cache[len(self._cache) - 1].message_id >> 22) + 1420070400000) / 1000, tz=tzinfo)
+    def get_max_time(self, channel_id: int | None, tzinfo: datetime.tzinfo) -> datetime.datetime:
+        for message in reversed(self._cache):
+            if channel_id is None or channel_id == message.channel_id:
+                return datetime.datetime.fromtimestamp(((message.message_id >> 22) + 1420070400000) / 1000, tz=tzinfo)
+        return datetime.datetime.min.replace(tzinfo=tzinfo)
 
     def get_cache(self) -> list[MessageModel]:
         return self._cache
