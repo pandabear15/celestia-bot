@@ -4,6 +4,31 @@ UW Genshin Discord's custom moderation bot.
 Celestia monitors and logs edit and delete actions on the server for the purposes of accountability and safety.
 For questions about the bot, please contact RicePulp#0077 and/or Purost#1025.
 
+## Version 1.1.2
+Released on XXXX.
+### Features
+- Celestia now attaches any images that were present in an edited or deleted message in the message logs.
+- The birthday patch will arrive in Version 1.2.0.
+### Bug fixes
+- Fixed a bug where Celestia inconsistently back-caches messages sent within the past hour upon reboot from a cache 
+file.
+- Fixed a bug where Celestia throws an error when attempting to write a log involving a post with over 1024 characters
+in its body.
+  - This might cause some logs affected by this scenario to look weird! Please let the devs know if any logs appear 
+malformed or otherwise strange.
+### Other changes
+- Code format issues/QOL changes.
+- After discussion with the mods, it has been determined that the current representation of stickers is sufficient and
+therefore the dev team will not look back into putting stickers in picture form into logs.
+### Known issues
+- It is possible for Celestia to repost the same log message multiple times by reacting to the same log message multiple
+times.
+- At roughly 1am PDT on October 9, 2022, Celestia encountered a series of errors that ultimately resulted in Celestia
+attempting to boot multiple instances of itself, EC2 booting up the test bot, and logs being in an untrustworthy state
+from that time to roughly 8am of the same day due to the developers being asleep. The cause is currently believed to be
+server-side or a connection issue, and is not an issue with the bot, but the devs are monitoring for this issue if it 
+occurs in the future.
+
 ## Version 1.1.1
 Released on 2022-09-26 17:14-07:00.
 ### Features
@@ -41,7 +66,7 @@ able to query Celestia directly for this information will make monitoring the bo
 the logs channel.
   - The purpose of this command is to be able to access and test an error message without an error actually occurring.
 - Celestia now has a 1 in 500 probability of DMing a member a message when the user edits or deletes a message.
-### Bug Fixes
+### Bug fixes
 - Fixed a bug that caused Celestia to read content strings in the cache file to be interpreted in the wrong encoding
 scheme.
   - Technically, nothing had to be done to fix this bug as it was never a bug in the first place. The dev team only
@@ -53,8 +78,8 @@ scheme.
 ### Known issues
 - None so far, but the dev team will be monitoring the bot closely over the next few days to ensure everything is going
 smoothly with the transfer to AWS EC2.
-- The dev team would also like to note that the updated sticker handling is still on the to-do list; it has not been
-forgotten.
+- ~~The dev team would also like to note that the updated sticker handling is still on the to-do list; it has not been
+forgotten.~~ **Obsolete as of Version 1.1.2.**
 
 ## Version 1.0.3
 Released on 2022-09-15 13:23-07:00.

@@ -1,5 +1,5 @@
 # Celestia Bot
-# Version 1.1.0
+# Version 1.1.2
 
 import os
 import time
@@ -12,6 +12,9 @@ import logging
 import datetime
 import random
 
+import aiohttp
+import io
+
 from dotenv import load_dotenv
 
 from message_model import MessageModel
@@ -22,14 +25,14 @@ class ExpectedException(Exception):
     pass
 
 
-version = '1.1.1'
+version = '1.1.2'
 
 # read config
 load_dotenv()
-config_file = open('.conf/prod_config.json')
+config_file = open('.conf/test_config.json')
 config = json.load(config_file)
 token: str = config['token']
-celestia_id: int = int(config['celestia_id']);
+celestia_id: int = int(config['celestia_id'])
 server: int = int(config['server'])
 admin_role = int(config['admin'])
 max_messages: int = int(config['max_messages'])
@@ -59,7 +62,8 @@ bot: commands.Bot = commands.Bot(command_prefix='+', intents=discord.Intents.all
                                  activity=discord.Activity(type=discord.ActivityType.watching,
                                                            name='over the server'))
 
-async def create_delete_log_embed(message: MessageModel) -> discord.Embed:
+
+async def create_delete_log_embed(message: MessageModel) -> tuple[discord.Embed, list[discord.File]]:
     author = bot.get_user(message.user_id)
     channel = bot.get_channel(message.channel_id)
 
@@ -72,37 +76,44 @@ async def create_delete_log_embed(message: MessageModel) -> discord.Embed:
     embed.set_author(name=f'{author.name}#{author.discriminator} ({author.display_name})',
                      icon_url=author.display_avatar.url)
     first_message_url = None
+    files = []
 
     while True:
         try:
             previous_message: discord.Message = await anext(message_iterator)
             if previous_message.type != discord.MessageType.default:
                 continue
-            embed.insert_field_at(index=0, name=f'**{previous_message.author.name}**',
-                                  value=get_message_content(previous_message),
-                                  inline=False)
+            num_fields = insert_embed_text(embed=embed, name=f'**{previous_message.author.name}**',
+                                           value=get_message_content(previous_message),
+                                           index=0)
             if len(previous_message.attachments) > 0:
-                embed.insert_field_at(index=1, name='Attachments',
+                embed.insert_field_at(index=num_fields, name='Attachments',
                                       value='\n'.join([attachment.url for attachment in previous_message.attachments]),
                                       inline=False)
+
             first_message_url = previous_message.jump_url
         except StopAsyncIteration:
             break
     if first_message_url is not None:
         embed.url = first_message_url
-    embed.add_field(name=f'Deleted message - {author.name}', value=await get_message_model_content(message),
-                    inline=False)
+    insert_embed_text(embed=embed, name=f'**Deleted message - {author.name}**',
+                      value=await get_message_model_content(message),
+                      index=len(embed.fields))
     if len(message.attachments) > 0:
         embed.add_field(name='Attachments', value='\n'.join(message.attachments), inline=False)
-    #    if message.sticker != '':
-    #        embed.set_image(url=message.sticker)
+        for index in range(len(message.attachments)):
+            ext = MessageModel.is_image(message.attachments[index])
+            if ext is not None:
+                files.append(discord.File(await get_image_bytes(message.attachments[index]),
+                                          f'Attachment {index + 1}{ext}'))
     embed.set_footer(text=f'Deleted at {datetime.datetime.now(get_timezone()).isoformat(sep=" ", timespec="seconds")}')
-    return embed
+    return embed, files
 
 
-async def create_edit_log_embed(before: MessageModel, after: MessageModel) -> discord.Embed:
+async def create_edit_log_embed(before: MessageModel, after: MessageModel) -> tuple[discord.Embed, list[discord.File]]:
     author = bot.get_user(after.user_id)
     channel = bot.get_channel(after.channel_id)
+    files = []
 
     embed_color = discord.Color.dark_gold()
     embed = discord.Embed(
@@ -112,17 +123,45 @@ async def create_edit_log_embed(before: MessageModel, after: MessageModel) -> di
     embed.set_author(name=f'{author.name}#{author.discriminator} ({author.display_name})',
                      icon_url=author.display_avatar.url)
     embed.url = (await channel.get_partial_message(after.message_id).fetch()).jump_url
-    embed.add_field(name=f'**Before**',
-                    value=await get_message_model_content(before), inline=False)
+    insert_embed_text(embed=embed, name=f'**Before**',
+                      value=await get_message_model_content(before), index=len(embed.fields))
     if len(before.attachments) > 0:
         embed.add_field(name='Attachments', value='\n'.join(before.attachments), inline=False)
-    embed.add_field(name=f'**After**', value=await get_message_model_content(after), inline=False)
+        for index in range(len(before.attachments)):
+            ext = MessageModel.is_image(before.attachments[index])
+            if ext is not None:
+                files.append(discord.File(await get_image_bytes(before.attachments[index]),
+                                          f'Attachment {index + 1}{ext}'))
+    insert_embed_text(embed=embed, name=f'**After**',
+                      value=await get_message_model_content(after), index=len(embed.fields))
     if len(after.attachments) > 0:
         embed.add_field(name='Attachments', value='\n'.join(after.attachments), inline=False)
-    #    if before.sticker != '':
-    #        embed.set_image(url=before.sticker)
     embed.set_footer(text=f'Edited at {datetime.datetime.now(get_timezone()).isoformat(sep=" ", timespec="seconds")}')
-    return embed
+    return embed, files
+
+
+def insert_embed_text(embed: discord.Embed, name: str, value: str, index: int) -> int:
+    max_length = 1024
+    string_breakup = []
+    while len(value) > max_length:
+        rindex = -1
+        try:
+            rindex = value.rindex(' ', 1, max_length)
+        except ValueError:
+            pass
+        if rindex >= 0:
+            string_breakup.append(value[0:rindex])
+            value = value[rindex+1:]
+        else:
+            string_breakup.append(value[0:max_length])
+            value = value[max_length:]
+    string_breakup.append(value)
+    for j in range(len(string_breakup)):
+        if j == 0:
+            embed.insert_field_at(index=index + j, name=name, value=string_breakup[j], inline=False)
+        else:
+            embed.insert_field_at(index=index + j, name='\u200b', value=string_breakup[j], inline=False)
+    return len(string_breakup)
 
 
 async def get_message_model_content(message: MessageModel) -> str:
@@ -142,16 +181,17 @@ async def populate_cache():
             cache_file = open(".cache/cache.txt")
             cache_object = json.load(cache_file)
             message_cache = MessageCache(max_cache_size=max_messages, cache=cache_object)
-            print_to_bot_logs(f'Loaded cache file in {round(get_unix_time(datetime.datetime.now()) - read_cache_time, 3)}s')
+            print_to_bot_logs(f'Loaded cache file in '
+                              f'{round(get_unix_time(datetime.datetime.now()) - read_cache_time, 3)}s')
         except json.decoder.JSONDecodeError:
             print_to_bot_logs("Failed to read cache file")
     guild: discord.Guild = bot.get_guild(server)
-    time_start = max([datetime.datetime.now(get_timezone()) - datetime.timedelta(days=backlog_length),
-                      message_cache.get_max_time(get_timezone())])
     if guild is not None:
         channels = guild.channels
         for channel in channels:
             if channel.type == discord.ChannelType.text and channel.category_id not in ignored_categories:
+                time_start = max([datetime.datetime.now(get_timezone()) - datetime.timedelta(days=backlog_length),
+                                  message_cache.get_max_time(channel_id=channel.id, tzinfo=get_timezone())])
                 print_to_bot_logs(f'Caching channel {channel.name}')
                 message_iterator = channel.history(limit=None, after=time_start)
                 while True:
@@ -187,8 +227,17 @@ async def send_dm_message(user_id: int):
         await user.send(content='https://media.discordapp.net/stickers/1018593299440869487.webp?size=160')
 
 
+async def get_image_bytes(proxy_url: str) -> io.BytesIO | None:
+    async with aiohttp.ClientSession() as session:
+        async with session.get(proxy_url) as resp:
+            if resp.status != 200:
+                return None
+            data = io.BytesIO(await resp.read())
+            return data
+
+
 def print_to_bot_logs(log: str):
-    print("attempted")
+    print(log)
     logging.info(log)
 
 
@@ -227,9 +276,11 @@ async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent):
             after = MessageModel(after_message)
             before = message_cache.get_message_model(message=after, update=True)
             if before is not None and not before.total_eq(after):
-                embed = await create_edit_log_embed(before=before, after=after)
+                embed, attachments = await create_edit_log_embed(before=before, after=after)
                 log = await bot.get_channel(log_channel).send(embed=embed)
                 await log.add_reaction('✉')
+                if len(attachments) > 0:
+                    await bot.get_channel(log_channel).send(files=attachments)
                 await send_dm_message(after.user_id)
     except:
         await notify_error(traceback.format_exc(limit=None), message_model=after)
@@ -246,9 +297,11 @@ async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
             message = message_cache.get_message_model(MessageModel(message=payload.cached_message, payload=payload),
                                                       delete=True)
             if message is not None:
-                embed = await create_delete_log_embed(message=message)
+                embed, attachments = await create_delete_log_embed(message=message)
                 log = await bot.get_channel(log_channel).send(embed=embed)
                 await log.add_reaction('✉')
+                if len(attachments) > 0:
+                    await bot.get_channel(log_channel).send(files=attachments)
                 await send_dm_message(message.user_id)
     except:
         await notify_error(traceback.format_exc(limit=None), message_model=message)
@@ -288,7 +341,7 @@ async def print_cache():
     cache_file.write(to_json(message_cache.get_cache()))
     cache_file.close()
     print_to_bot_logs(f'Wrote to cache at {datetime.datetime.now(tz=get_timezone()).isoformat()}, writing time was '
-          f'{round(get_unix_time(datetime.datetime.now()) - print_cache_time, 3)}s')
+                      f'{round(get_unix_time(datetime.datetime.now()) - print_cache_time, 3)}s')
 
 
 @bot.command(name='info')
@@ -319,11 +372,14 @@ async def on_ready():
         populate_time: float = get_unix_time(datetime.datetime.now())
         print_to_bot_logs('Populating cache\n')
         await populate_cache()
-        print_to_bot_logs(f'Cache populated in {round(get_unix_time(datetime.datetime.now()) - populate_time, 3)} seconds\n')
+        caching_time = round(get_unix_time(datetime.datetime.now()) - populate_time, 3)
+        print_to_bot_logs(f'Cache populated in {caching_time} '
+                          f'seconds\n')
         print_cache.start()
         print_to_bot_logs(get_metrics())
-        await bot.get_channel(log_channel).send(content='Celestia has booted up and is now '
-                                                        'monitoring edits and deletions.')
+        msg = await bot.get_channel(log_channel).send(content=f'Celestia has booted up and is now monitoring '
+                                                              f'edits and deletions. Caching time: {caching_time} sec')
+        await msg.add_reaction('✉')
         print_to_bot_logs('Celestia is ready.\n')
     except:
         await notify_error(traceback.format_exc(limit=None))

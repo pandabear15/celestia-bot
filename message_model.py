@@ -5,7 +5,7 @@ import json
 def _list_attachments(attachments: list[discord.Attachment]) -> list[str]:
     str_list: list[str] = []
     for i in range(len(attachments)):
-        str_list.append(attachments[i].url)
+        str_list.append(attachments[i].proxy_url)
     return str_list
 
 
@@ -66,3 +66,11 @@ class MessageModel:
     def total_eq(self, other):
         return (self.message_id == other.message_id and self.content == other.content
                 and self.sticker == other.sticker and ''.join(self.attachments) == ''.join(other.attachments))
+
+    @staticmethod
+    def is_image(url: str) -> str | None:
+        img_suffixes = ['.jpg', '.jpeg', '.png', '.gif']
+        for suffix in img_suffixes:
+            if url.endswith(suffix):
+                return suffix
+        return None
