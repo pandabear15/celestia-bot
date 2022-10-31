@@ -5,7 +5,7 @@ Celestia monitors and logs edit and delete actions on the server for the purpose
 For questions about the bot, please contact RicePulp#0077 and/or Purost#1025.
 
 ## Version 1.1.2
-Released on XXXX.
+Released on 2022-10-30 22:00-07:00.
 ### Features
 - Celestia now attaches any images that were present in an edited or deleted message in the message logs.
 - The birthday patch will arrive in Version 1.2.0.
