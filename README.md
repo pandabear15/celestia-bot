@@ -5,7 +5,7 @@ Celestia monitors and logs edit and delete actions on the server for the purpose
 For questions about the bot, please contact RicePulp#0077 and/or Purost#1025.
 
 ## Version 1.2.0
-Released on XXXX.
+Released on 2022-11-20 20:36-08:00.
 ### Features
 - Celestia now counts pings in the birthday event channel. Ping count can be retrieved via the "+giveaway" command after 
 the giveaway ends.
