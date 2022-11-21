@@ -1,9 +1,10 @@
 # Celestia Bot
-# Version 1.1.2
+# Version 1.2.0
 
 import os
 import time
 import traceback
+from collections import defaultdict, Counter
 
 import discord
 from discord.ext import tasks, commands
@@ -11,6 +12,7 @@ import json
 import logging
 import datetime
 import random
+import numpy as np
 
 import aiohttp
 import io
@@ -25,7 +27,7 @@ class ExpectedException(Exception):
     pass
 
 
-version = '1.1.2'
+version = '1.2.0'
 
 # read config
 load_dotenv()
@@ -47,6 +49,15 @@ read_cache_file: bool = config['read_cache_file']
 # cache
 message_cache: MessageCache = MessageCache(max_cache_size=max_messages)
 i: int = 0
+
+# birthday
+birthday_date: datetime.date = datetime.date(year=2022, month=11, day=22)
+birthday_channel_id: int = int(config['birthday_channel_id'])
+ping_cooldown: datetime.timedelta = datetime.timedelta(minutes=15)
+recent_ping_dict: dict[int, datetime.datetime] = defaultdict(lambda: datetime.datetime.min)
+recent_ping_list: list = []
+recent_ping_list_len: int = 4
+tickets: dict = Counter()
 
 # other variables
 celestia_caught: int = 1018593299440869487
@@ -100,12 +111,12 @@ async def create_delete_log_embed(message: MessageModel) -> tuple[discord.Embed,
                       value=await get_message_model_content(message),
                       index=len(embed.fields))
     if len(message.attachments) > 0:
-        embed.add_field(name='Attachments', value='\n'.join(message.attachments), inline=False)
+        embed.add_field(name='Attachments', value='\n'.join([attachment[0] for attachment in message.attachments]), inline=False)
         for index in range(len(message.attachments)):
-            ext = MessageModel.is_image(message.attachments[index])
+            ext = MessageModel.is_image(message.attachments[index][0])
             if ext is not None:
-                files.append(discord.File(await get_image_bytes(message.attachments[index]),
-                                          f'Attachment {index + 1}{ext}'))
+                files.append(discord.File(await get_image_bytes(message.attachments[index][0]),
+                                          f'Attachment {index + 1}{ext}', spoiler=message.attachments[index][1]))
     embed.set_footer(text=f'Deleted at {datetime.datetime.now(get_timezone()).isoformat(sep=" ", timespec="seconds")}')
     return embed, files
 
@@ -126,16 +137,16 @@ async def create_edit_log_embed(before: MessageModel, after: MessageModel) -> tu
     insert_embed_text(embed=embed, name=f'**Before**',
                       value=await get_message_model_content(before), index=len(embed.fields))
     if len(before.attachments) > 0:
-        embed.add_field(name='Attachments', value='\n'.join(before.attachments), inline=False)
+        embed.add_field(name='Attachments', value='\n'.join([attachment[0] for attachment in before.attachments]), inline=False)
         for index in range(len(before.attachments)):
-            ext = MessageModel.is_image(before.attachments[index])
+            ext = MessageModel.is_image(before.attachments[index][0])
             if ext is not None:
-                files.append(discord.File(await get_image_bytes(before.attachments[index]),
-                                          f'Attachment {index + 1}{ext}'))
+                files.append(discord.File(await get_image_bytes(before.attachments[index][0]),
+                                          f'Attachment {index + 1}{ext}', spoiler=before.attachments[index][1]))
     insert_embed_text(embed=embed, name=f'**After**',
                       value=await get_message_model_content(after), index=len(embed.fields))
     if len(after.attachments) > 0:
-        embed.add_field(name='Attachments', value='\n'.join(after.attachments), inline=False)
+        embed.add_field(name='Attachments', value='\n'.join([attachment[0] for attachment in after.attachments]), inline=False)
     embed.set_footer(text=f'Edited at {datetime.datetime.now(get_timezone()).isoformat(sep=" ", timespec="seconds")}')
     return embed, files
 
@@ -318,6 +329,7 @@ async def on_message(message: discord.Message):
             i = i + 1
             if i % 100 == 0:
                 print_to_bot_logs(get_metrics())
+        await ping_giveaway(message)
     except:
         await notify_error(traceback.format_exc(limit=None), message_model=MessageModel(message))
     await bot.process_commands(message)
@@ -329,9 +341,13 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
             and user.id != celestia_id
             and bot.get_guild(server).get_member(user.id).get_role(admin_role) is not None
             and reaction.emoji.__str__() == '✉'):
-        content = reaction.message.content
-        embeds = reaction.message.embeds
-        await bot.get_channel(dev_channel).send(content=content, embeds=embeds)
+        async for user in reaction.users():
+            if user.id == bot.user.id:
+                await reaction.message.remove_reaction('✉', bot.user)
+                await reaction.message.add_reaction('📮')
+                content = reaction.message.content
+                embeds = reaction.message.embeds
+                await bot.get_channel(dev_channel).send(content=content, embeds=embeds)
 
 
 @tasks.loop(hours=1)
@@ -344,7 +360,50 @@ async def print_cache():
                       f'{round(get_unix_time(datetime.datetime.now()) - print_cache_time, 3)}s')
 
 
-@bot.command(name='info')
+async def ping_giveaway(message: discord.Message):
+    if message.channel.id == birthday_channel_id and 250052006482280449 in [member.id for member in message.mentions]:
+        if not message.author.bot and message.created_at.astimezone(tz=get_timezone()).date() == birthday_date:
+            member = message.author
+            if (member.id not in recent_ping_list or
+                    datetime.datetime.now(tz=get_timezone()) - recent_ping_dict[member.id] >= ping_cooldown):
+                if len(recent_ping_list) >= recent_ping_list_len:
+                    recent_ping_list.pop(0)
+                recent_ping_list.append(member.id)
+                recent_ping_dict[member.id] = datetime.datetime.now(tz=get_timezone())
+                tickets[member.id] += 1
+                await message.add_reaction('🎫')
+
+
+@bot.command(name='giveaway')
+async def get_giveaway_dict(ctx: commands.Context):
+    if ctx.message.channel.id == log_channel and ctx.author.get_role(admin_role) is not None:
+        try:
+            if datetime.date.today() > birthday_date:
+                if len(tickets.keys()) == 0:
+                    log = await bot.get_channel(log_channel).send(
+                        content='No one participated in the giveaway.')
+                    await log.add_reaction('✉')
+                else:
+                    ticket_list: np.ndarray = np.array(list(tickets.items()))
+                    ticket_list = ticket_list[ticket_list[:, 1].argsort()]
+                    string_list = []
+                    for pair in ticket_list:
+                        member = bot.get_guild(server).get_member(pair[0])
+                        if member is not None:
+                            string_list.append(f'{member.name}#{member.discriminator}: {pair[1]}')
+                    log = await bot.get_channel(log_channel).send(content='Giveaway results:\n' + '\n'.join(string_list))
+                    await log.add_reaction('✉')
+            elif datetime.date.today() == birthday_date:
+                log = await bot.get_channel(log_channel).send(content='Giveaway is ongoing.')
+                await log.add_reaction('✉')
+            else:
+                log = await bot.get_channel(log_channel).send(content='Giveaway has not started.')
+                await log.add_reaction('✉')
+        except:
+            await notify_error(traceback.format_exc(limit=None))
+
+
+@bot.command(name='status', aliases=['info'])
 async def get_info(ctx: commands.Context):
     if ctx.message.channel.id == log_channel and ctx.author.get_role(admin_role) is not None:
         content = (f'```Running version {version}' + '\n' + f'Celestia has been running for '

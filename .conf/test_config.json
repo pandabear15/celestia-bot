@@ -10,5 +10,6 @@
   "log_history": 3,
   "ignored_categories": [1017687958171680779],
   "dm_probability": 0.5,
-  "read_cache_file": true
+  "read_cache_file": false,
+  "birthday_channel_id": 1034134065995059262
 }
