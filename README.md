@@ -4,6 +4,25 @@ UW Genshin Discord's custom moderation bot.
 Celestia monitors and logs edit and delete actions on the server for the purposes of accountability and safety.
 For questions about the bot, please contact RicePulp#0077 and/or Purost#1025.
 
+## Version 1.2.0
+Released on XXXX.
+### Features
+- Celestia now counts pings in the birthday event channel. Ping count can be retrieved via the "+giveaway" command after 
+the giveaway ends.
+- Celestia now spoilers images in logs if they were spoilered when they were originally posted.
+- "+status" is now the default command that retrieves Celestia's current state. "+info" is aliased to the status
+command.
+- Celestia now indicates whether a log message has already been sent to the bot developers via removing the "✉" emoji
+and replacing it with the "📮" emoji. This also ensures that a log message cannot be sent twice.
+### Bug fixes
+None.
+### Other changes
+None.
+### Known issues
+- Currently, images cannot be automatically shared to devs by reacting with the mail emoji.
+- Due to some edge case behavior regarding replies, rollout of the reply indication in logs as mentioned in the
+Known issues section of 1.1.1 is delayed, and will hopefully be implemented next patch.
+
 ## Version 1.1.2
 Released on 2022-10-30 22:00-07:00.
 ### Features
@@ -21,8 +40,8 @@ malformed or otherwise strange.
 - After discussion with the mods, it has been determined that the current representation of stickers is sufficient and
 therefore the dev team will not look back into putting stickers in picture form into logs.
 ### Known issues
-- It is possible for Celestia to repost the same log message multiple times by reacting to the same log message multiple
-times.
+- ~~It is possible for Celestia to repost the same log message multiple times by reacting to the same log message multiple
+times.~~ **Addressed in Version 1.2.0.**
 - At roughly 1am PDT on October 9, 2022, Celestia encountered a series of errors that ultimately resulted in Celestia
 attempting to boot multiple instances of itself, EC2 booting up the test bot, and logs being in an untrustworthy state
 from that time to roughly 8am of the same day due to the developers being asleep. The cause is currently believed to be

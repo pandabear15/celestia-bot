@@ -2,10 +2,10 @@ import discord
 import json
 
 
-def _list_attachments(attachments: list[discord.Attachment]) -> list[str]:
-    str_list: list[str] = []
+def _list_attachments(attachments: list[discord.Attachment]) -> list[(str, bool)]:
+    str_list: list[(str, bool)] = []
     for i in range(len(attachments)):
-        str_list.append(attachments[i].proxy_url)
+        str_list.append((attachments[i].proxy_url, attachments[i].is_spoiler()))
     return str_list
 
 
@@ -20,7 +20,7 @@ class MessageModel:
             self.user_id: int = message.author.id
             self.content: str = message.content
             self.sticker: int = 0 if len(message.stickers) <= 0 else message.stickers[0].id
-            self.attachments: list[str] = _list_attachments(message.attachments)
+            self.attachments: list[(str, bool)] = _list_attachments(message.attachments)
             if self.content == '':
                 self.content = '*[Empty message body]*'
         elif payload is not None:
@@ -29,7 +29,7 @@ class MessageModel:
             self.user_id: int = 0
             self.content: str = ''
             self.sticker: int = 0
-            self.attachments: list[str] = []
+            self.attachments: list[(str, bool)] = []
         else:
             self.__dict__.update(kwargs['dict'])
 
@@ -65,7 +65,8 @@ class MessageModel:
 
     def total_eq(self, other):
         return (self.message_id == other.message_id and self.content == other.content
-                and self.sticker == other.sticker and ''.join(self.attachments) == ''.join(other.attachments))
+                and self.sticker == other.sticker and len(self.attachments) == len(other.attachments)
+                and self.attachments[i][0] == other.attachments[i][0] for i in range(len(self.attachments)))
 
     @staticmethod
     def is_image(url: str) -> str | None:
