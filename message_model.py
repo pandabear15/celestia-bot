@@ -65,8 +65,15 @@ class MessageModel:
 
     def total_eq(self, other):
         return (self.message_id == other.message_id and self.content == other.content
-                and self.sticker == other.sticker and len(self.attachments) == len(other.attachments)
-                and self.attachments[i][0] == other.attachments[i][0] for i in range(len(self.attachments)))
+                and self.sticker == other.sticker and self.attachment_eq(other))
+
+    def attachment_eq(self, other):
+        if len(self.attachments) != len(other.attachments):
+            return False
+        for i in range(len(self.attachments)):
+            if self.attachments[i][0] != other.attachments[i][0]:
+                return False
+        return True
 
     @staticmethod
     def is_image(url: str) -> str | None:

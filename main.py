@@ -204,16 +204,19 @@ async def populate_cache():
                 time_start = max([datetime.datetime.now(get_timezone()) - datetime.timedelta(days=backlog_length),
                                   message_cache.get_max_time(channel_id=channel.id, tzinfo=get_timezone())])
                 print_to_bot_logs(f'Caching channel {channel.name}')
+                num_messages = 0
                 message_iterator = channel.history(limit=None, after=time_start)
                 while True:
                     try:
                         next_message: discord.Message = await anext(message_iterator)
                         if not next_message.author.bot and next_message.type == discord.MessageType.default:
                             message_cache.add_message_model(MessageModel(next_message), append=False)
+                            num_messages += 1
                     except StopAsyncIteration:
                         break
                     except discord.errors.Forbidden:
                         break
+                print_to_bot_logs(f'Found {num_messages} to cache')
     is_setting_up = False
 
 
