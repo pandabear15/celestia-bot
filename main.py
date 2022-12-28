@@ -27,7 +27,7 @@ class ExpectedException(Exception):
     pass
 
 
-version = '1.2.0'
+version = '1.2.1'
 
 # read config
 load_dotenv()

@@ -5,7 +5,7 @@ Celestia monitors and logs edit and delete actions on the server for the purpose
 For questions about the bot, please contact pandabear2#4970, RicePulp#0077 and/or Purost#1025.
 
 ## Version 1.2.1
-Released on XXXX.
+Released on 2022-12-28 12:42-08:00.
 ### Features
 - Celestia now has a 10% chance of sending the message "ok tyler 🎫" if the most recent message in a channel receives a
 '🎫' reaction. Cooldown of one hour globally.
