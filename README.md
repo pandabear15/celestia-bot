@@ -2,7 +2,22 @@
 UW Genshin Discord's custom moderation bot.
 
 Celestia monitors and logs edit and delete actions on the server for the purposes of accountability and safety.
-For questions about the bot, please contact RicePulp#0077 and/or Purost#1025.
+For questions about the bot, please contact pandabear2#4970, RicePulp#0077 and/or Purost#1025.
+
+## Version 1.2.1
+Released on XXXX.
+### Features
+- Celestia now has a 10% chance of sending the message "ok tyler 🎫" if the most recent message in a channel receives a
+'🎫' reaction. Cooldown of one hour globally.
+- Celestia now indicates and links to the message that a message replied to, if any, on delete logs.
+### Bug fixes
+- Fixed a bug where Celestia would completely ignore messages that were written in a reply to another message.
+- Fixed various bugs that could arise if the cache contains zero entries.
+### Other changes
+- The command "+giveaway" has been depreciated.
+### Known issues
+- It is possible for message logs dealing with extremely long messages (currently only possible for users with Nitro) to
+cause Celestia's message log to fail to send due to embed size limits.
 
 ## Version 1.2.0
 Released on 2022-11-20 20:36-08:00.

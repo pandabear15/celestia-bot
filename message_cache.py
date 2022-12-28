@@ -21,23 +21,26 @@ class MessageCache:
     def add_message_model(self, message: MessageModel, append: bool = True):
         self._lock.acquire()
         try:
-            if append:
-                if not self._cache[len(self._cache) - 1].total_eq(message):
-                    self._cache.append(message)
+            if len(self._cache) == 0:
+                self._cache.append(message)
             else:
-                left: int = 0
-                right: int = len(self._cache) - 1
-                while left <= right:
-                    mid = (left + right) // 2
-                    if self._cache[mid] < message:
-                        left = mid + 1
-                    elif self._cache[mid] > message:
-                        right = mid - 1
-                    else:
-                        left = mid
-                        break
-                if left >= len(self._cache) or not self._cache[left].total_eq(message):
-                    self._cache.insert(left, message)
+                if append:
+                    if not self._cache[len(self._cache) - 1].total_eq(message):
+                        self._cache.append(message)
+                else:
+                    left: int = 0
+                    right: int = len(self._cache) - 1
+                    while left <= right:
+                        mid = (left + right) // 2
+                        if self._cache[mid] < message:
+                            left = mid + 1
+                        elif self._cache[mid] > message:
+                            right = mid - 1
+                        else:
+                            left = mid
+                            break
+                    if left >= len(self._cache) or not self._cache[left].total_eq(message):
+                        self._cache.insert(left, message)
             if len(self._cache) > self._max_cache_size:
                 self._cache = (self._cache.append(message))[-self._max_cache_size:]
         finally:
