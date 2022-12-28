@@ -43,7 +43,7 @@ log_channel: int = int(config['log_channel'])
 dev_channel: int = int(config['dev_channel'])
 log_history: int = int(config['log_history'])
 ignored_categories: list[int] = config['ignored_categories']
-dm_probability: float = config['dm_probability']
+dm_probability: float = float(config['dm_probability'])
 read_cache_file: bool = config['read_cache_file']
 
 # cache
@@ -58,6 +58,11 @@ recent_ping_dict: dict[int, datetime.datetime] = defaultdict(lambda: datetime.da
 recent_ping_list: list = []
 recent_ping_list_len: int = 4
 tickets: dict = Counter()
+
+# ok tyler
+ok_tyler_time: datetime.datetime = datetime.datetime.min
+ok_tyler_cooldown: datetime.timedelta = datetime.timedelta(minutes=int(config['ok_tyler_cooldown']))
+ok_tyler_probability: float = float(config['ok_tyler_probability'])
 
 # other variables
 celestia_caught: int = 1018593299440869487
@@ -82,7 +87,8 @@ async def create_delete_log_embed(message: MessageModel) -> tuple[discord.Embed,
     embed_color = discord.Color.red()
     embed = discord.Embed(
         title='Message deleted',
-        description=f'**{author.name}\'s message was deleted in <#{channel.id}>**',
+        description=f'**{author.name}\'s message was deleted in <#{channel.id}>**' +
+                    (f'\nReplied to [this message]({message.reply_url})' if message.reply_url != '' else ''),
         color=embed_color)
     embed.set_author(name=f'{author.name}#{author.discriminator} ({author.display_name})',
                      icon_url=author.display_avatar.url)
@@ -129,7 +135,8 @@ async def create_edit_log_embed(before: MessageModel, after: MessageModel) -> tu
     embed_color = discord.Color.dark_gold()
     embed = discord.Embed(
         title='Message edited',
-        description=f'**{author.name} edited a message in <#{channel.id}>**',
+        description=f'**{author.name} edited a message in <#{channel.id}>**' +
+                    (f'\nReplied to [this message]({before.reply_url})' if before.reply_url != '' else ''),
         color=embed_color)
     embed.set_author(name=f'{author.name}#{author.discriminator} ({author.display_name})',
                      icon_url=author.display_avatar.url)
@@ -209,7 +216,7 @@ async def populate_cache():
                 while True:
                     try:
                         next_message: discord.Message = await anext(message_iterator)
-                        if not next_message.author.bot and next_message.type == discord.MessageType.default:
+                        if not next_message.author.bot and is_normal_message(next_message.type):
                             message_cache.add_message_model(MessageModel(next_message), append=False)
                             num_messages += 1
                     except StopAsyncIteration:
@@ -259,7 +266,7 @@ def get_metrics() -> str:
     length = message_cache.len()
     size = message_cache.__sizeof__()
     ret_str = (f'Cache length: {length} entries' + '\n' + f'Cache size: {size} bytes' + '\n'
-               f'Average entry size: {round(size / length, 2)} bytes')
+               f'Average entry size: {round(size / length, 2) if length > 0 else 0} bytes')
     return ret_str
 
 
@@ -273,6 +280,10 @@ def is_daylight_savings() -> bool:
 
 def get_timezone() -> datetime.tzinfo:
     return pdt if is_daylight_savings() else pst
+
+
+def is_normal_message(message_type: discord.MessageType) -> bool:
+    return message_type == discord.MessageType.default or message_type == discord.MessageType.reply
 
 
 def to_json(obj):
@@ -327,12 +338,14 @@ async def on_message(message: discord.Message):
     try:
         if ((not message.author.bot) and message.guild.id == server
                 and message.channel.category_id not in ignored_categories
-                and message.type == discord.MessageType.default):
+                and is_normal_message(message.type)):
+            print('processing message')
             message_cache.add_message_model(MessageModel(message=message))
             i = i + 1
             if i % 100 == 0:
                 print_to_bot_logs(get_metrics())
-        await ping_giveaway(message)
+        # custom message functions
+        # await ping_giveaway(message)
     except:
         await notify_error(traceback.format_exc(limit=None), message_model=MessageModel(message))
     await bot.process_commands(message)
@@ -340,17 +353,22 @@ async def on_message(message: discord.Message):
 
 @bot.event
 async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
-    if (reaction.message.channel.id == log_channel and reaction.message.author.id == celestia_id
-            and user.id != celestia_id
-            and bot.get_guild(server).get_member(user.id).get_role(admin_role) is not None
-            and reaction.emoji.__str__() == '✉'):
-        async for user in reaction.users():
-            if user.id == bot.user.id:
-                await reaction.message.remove_reaction('✉', bot.user)
-                await reaction.message.add_reaction('📮')
-                content = reaction.message.content
-                embeds = reaction.message.embeds
-                await bot.get_channel(dev_channel).send(content=content, embeds=embeds)
+    try:
+        if (reaction.message.channel.id == log_channel and reaction.message.author.id == celestia_id
+                and user.id != celestia_id
+                and bot.get_guild(server).get_member(user.id).get_role(admin_role) is not None
+                and reaction.emoji.__str__() == '✉'):
+            async for user in reaction.users():
+                if user.id == bot.user.id:
+                    await reaction.message.remove_reaction('✉', bot.user)
+                    await reaction.message.add_reaction('📮')
+                    content = reaction.message.content
+                    embeds = reaction.message.embeds
+                    await bot.get_channel(dev_channel).send(content=content, embeds=embeds)
+        # custom functions
+        await ok_tyler(reaction, user)
+    except:
+        await notify_error(traceback.format_exc(limit=None), message_model=MessageModel(reaction.message))
 
 
 @tasks.loop(hours=1)
@@ -363,6 +381,7 @@ async def print_cache():
                       f'{round(get_unix_time(datetime.datetime.now()) - print_cache_time, 3)}s')
 
 
+# Defunct method, as giveaway is over
 async def ping_giveaway(message: discord.Message):
     if message.channel.id == birthday_channel_id and 250052006482280449 in [member.id for member in message.mentions]:
         if not message.author.bot and message.created_at.astimezone(tz=get_timezone()).date() == birthday_date:
@@ -377,31 +396,45 @@ async def ping_giveaway(message: discord.Message):
                 await message.add_reaction('🎫')
 
 
+async def ok_tyler(reaction: discord.Reaction, user: discord.User):
+    global ok_tyler_time
+    message = reaction.message
+    if (message.guild.id == server and message.channel.category_id not in ignored_categories and not user.bot
+            and message.channel.last_message_id == message.id and reaction.emoji.__str__() == '🎫'
+            and datetime.datetime.now() - ok_tyler_time >= ok_tyler_cooldown
+            and random.uniform(0, 1) <= ok_tyler_probability):
+        ok_tyler_time = datetime.datetime.now()
+        await message.channel.send(content='ok tyler 🎫')
+
+
+
 @bot.command(name='giveaway')
 async def get_giveaway_dict(ctx: commands.Context):
     if ctx.message.channel.id == log_channel and ctx.author.get_role(admin_role) is not None:
         try:
-            if datetime.date.today() > birthday_date:
-                if len(tickets.keys()) == 0:
-                    log = await bot.get_channel(log_channel).send(
-                        content='No one participated in the giveaway.')
-                    await log.add_reaction('✉')
-                else:
-                    ticket_list: np.ndarray = np.array(list(tickets.items()))
-                    ticket_list = ticket_list[ticket_list[:, 1].argsort()]
-                    string_list = []
-                    for pair in ticket_list:
-                        member = bot.get_guild(server).get_member(pair[0])
-                        if member is not None:
-                            string_list.append(f'{member.name}#{member.discriminator}: {pair[1]}')
-                    log = await bot.get_channel(log_channel).send(content='Giveaway results:\n' + '\n'.join(string_list))
-                    await log.add_reaction('✉')
-            elif datetime.date.today() == birthday_date:
-                log = await bot.get_channel(log_channel).send(content='Giveaway is ongoing.')
-                await log.add_reaction('✉')
-            else:
-                log = await bot.get_channel(log_channel).send(content='Giveaway has not started.')
-                await log.add_reaction('✉')
+            # if datetime.date.today() > birthday_date:
+            #     if len(tickets.keys()) == 0:
+            #         log = await bot.get_channel(log_channel).send(
+            #             content='No one participated in the giveaway.')
+            #         await log.add_reaction('✉')
+            #     else:
+            #         ticket_list: np.ndarray = np.array(list(tickets.items()))
+            #         ticket_list = ticket_list[ticket_list[:, 1].argsort()]
+            #         string_list = []
+            #         for pair in ticket_list:
+            #             member = bot.get_guild(server).get_member(pair[0])
+            #             if member is not None:
+            #                 string_list.append(f'{member.name}#{member.discriminator}: {pair[1]}')
+            #         log = await bot.get_channel(log_channel).send(content='Giveaway results:\n' + '\n'.join(string_list))
+            #         await log.add_reaction('✉')
+            # elif datetime.date.today() == birthday_date:
+            #     log = await bot.get_channel(log_channel).send(content='Giveaway is ongoing.')
+            #     await log.add_reaction('✉')
+            # else:
+            #     log = await bot.get_channel(log_channel).send(content='Giveaway has not started.')
+            #     await log.add_reaction('✉')
+            log = await bot.get_channel(log_channel).send(content='Defunct command.')
+            await log.add_reaction('✉')
         except:
             await notify_error(traceback.format_exc(limit=None))
 

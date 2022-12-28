@@ -21,6 +21,7 @@ class MessageModel:
             self.content: str = message.content
             self.sticker: int = 0 if len(message.stickers) <= 0 else message.stickers[0].id
             self.attachments: list[(str, bool)] = _list_attachments(message.attachments)
+            self.reply_url: str = message.reference.jump_url if message.reference is not None else ''
             if self.content == '':
                 self.content = '*[Empty message body]*'
         elif payload is not None:
@@ -30,6 +31,7 @@ class MessageModel:
             self.content: str = ''
             self.sticker: int = 0
             self.attachments: list[(str, bool)] = []
+            self.reply_url: str = ''
         else:
             self.__dict__.update(kwargs['dict'])
 
