@@ -1,5 +1,5 @@
 # Celestia Bot
-# Version 1.2.0
+# Version 1.3.0
 
 import os
 import time
@@ -12,7 +12,6 @@ import json
 import logging
 import datetime
 import random
-import numpy as np
 
 import aiohttp
 import io
@@ -21,13 +20,14 @@ from dotenv import load_dotenv
 
 from message_model import MessageModel
 from message_cache import MessageCache
+from music_cog import MusicBot
 
 
 class ExpectedException(Exception):
     pass
 
 
-version = '1.2.1'
+version = '1.3.0'
 
 # read config
 load_dotenv()
@@ -45,6 +45,8 @@ log_history: int = int(config['log_history'])
 ignored_categories: list[int] = config['ignored_categories']
 dm_probability: float = float(config['dm_probability'])
 read_cache_file: bool = config['read_cache_file']
+music_channel: int = int(config['music_channel'])
+music_cmd_channel: int = int(config['music_cmd_channel'])
 
 # cache
 message_cache: MessageCache = MessageCache(max_cache_size=max_messages)
@@ -90,7 +92,7 @@ async def create_delete_log_embed(message: MessageModel) -> tuple[discord.Embed,
         description=f'**{author.name}\'s message was deleted in <#{channel.id}>**' +
                     (f'\nReplied to [this message]({message.reply_url})' if message.reply_url != '' else ''),
         color=embed_color)
-    embed.set_author(name=f'{author.name}#{author.discriminator} ({author.display_name})',
+    embed.set_author(name=f'{author.global_name} ({author.display_name})',
                      icon_url=author.display_avatar.url)
     first_message_url = None
     files = []
@@ -138,7 +140,7 @@ async def create_edit_log_embed(before: MessageModel, after: MessageModel) -> tu
         description=f'**{author.name} edited a message in <#{channel.id}>**' +
                     (f'\nReplied to [this message]({before.reply_url})' if before.reply_url != '' else ''),
         color=embed_color)
-    embed.set_author(name=f'{author.name}#{author.discriminator} ({author.display_name})',
+    embed.set_author(name=f'{author.global_name} ({author.display_name})',
                      icon_url=author.display_avatar.url)
     embed.url = (await channel.get_partial_message(after.message_id).fetch()).jump_url
     insert_embed_text(embed=embed, name=f'**Before**',
@@ -339,7 +341,6 @@ async def on_message(message: discord.Message):
         if ((not message.author.bot) and message.guild.id == server
                 and message.channel.category_id not in ignored_categories
                 and is_normal_message(message.type)):
-            print('processing message')
             message_cache.add_message_model(MessageModel(message=message))
             i = i + 1
             if i % 100 == 0:
@@ -461,6 +462,7 @@ async def raise_error(ctx: commands.Context):
 @bot.event
 async def on_ready():
     global start_time
+    await bot.add_cog(MusicBot(bot, bot.get_channel(music_channel), bot.get_channel(music_cmd_channel)))
     try:
         print_to_bot_logs('We have logged in as {0.user}'.format(bot) + '\n')
         start_time = datetime.datetime.now(get_timezone())

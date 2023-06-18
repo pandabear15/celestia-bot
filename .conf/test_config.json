@@ -13,5 +13,7 @@
   "read_cache_file": false,
   "birthday_channel_id": 1034134065995059262,
   "ok_tyler_cooldown": 1,
-  "ok_tyler_probability": 1.0
+  "ok_tyler_probability": 1.0,
+  "music_channel": 790789893071962136,
+  "music_cmd_channel": 1118775361061269615
 }

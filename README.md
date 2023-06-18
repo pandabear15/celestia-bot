@@ -2,7 +2,40 @@
 UW Genshin Discord's custom moderation bot.
 
 Celestia monitors and logs edit and delete actions on the server for the purposes of accountability and safety.
-For questions about the bot, please contact pandabear2#4970, RicePulp#0077 and/or Purost#1025.
+For questions about the bot, please contact pandabear2, ricepulp and/or purost.
+
+## Version 1.3.0
+Released on 2023-06-18 14:56-07:00.
+### Features
+- This is technically not a feature, but is significant enough to mention that Celestia now correctly handles the new
+Discord username changes.
+- Celestia is now a music bot. Use the following commands to interact with the bot:
+  - +join: summons Celestia to the voice chat and grants the caller music control.
+  - +leave: dismisses Celestia and revokes all users of music control.
+  - +search [string]: search for a song. Celestia responds with a list of the top five results.
+  - +play [url or string]: immediately add a song from YouTube, or the top search result on YouTube to the queue.
+  - +playnow [int]: stops the current song (if a song is being played) and starts playing the song in this position
+  in the queue. Requires control permission.
+  - +pause: pauses the current song. Requires control permission.
+  - +resume: resumes the current song if music was paused or stopped. Requires control permission.
+  - +stop: stops playback of current song, but keeps the current queue. Requires control permission.
+  - +skip: skips current song and starts playing the next song in queue. Requires control permission.
+  - +repeat [on/off]: requeues completed songs if on, disables this behavior if off. Default is off. Requires control permission.
+  - +shuffle: shuffles the remaining queue. Requires control permission.
+  - +clear: removes all songs from the queue. Does not stop the current song. Requires control permission.
+  - +dequeue [int]: removes a song from the queue. Requires control permission to dequeue a song a user did not 
+  add themselves.
+  - +control: requests control of the music functionality of Celestia. Is automatically granted if no controller is 
+  present in the call.
+  - +control [username]: grants control of the music bot to a user. Control cannot be revoked once given until Celestia
+  leaves the voice chat. Requires control permission.
+  - +controllers: lists all current controllers of Celestia's music functionalities. 
+  - +public: grants all users in the voice channel control permission, including users that join after this command is
+  given. Cannot be revoked once given until Celestia leaves.
+  - +playlist: views the current queue.
+  - +current: views the current song if a song is playing.
+### Known Issues
+- Celestia currently does not recognize Spotify or other music-type links. Future updates may add this functionality.
 
 ## Version 1.2.1
 Released on 2022-12-28 12:42-08:00.
